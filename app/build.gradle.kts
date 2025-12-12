@@ -9,10 +9,10 @@ android {
 
     defaultConfig {
         applicationId = "com.lucid.app"
-        minSdk = 26
+        minSdk = 29
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "0.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -89,6 +89,16 @@ dependencies {
 
     // JSON parsing
     implementation("org.json:json:20231013")
+    implementation("com.google.code.gson:gson:2.10.1")
+
+    // HTTP client
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // HTML parsing
+    implementation("org.jsoup:jsoup:1.17.2")
+
+    // ViewModel
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

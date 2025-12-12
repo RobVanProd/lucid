@@ -1,5 +1,8 @@
 package com.lucid.app.filter
 
+import com.lucid.app.ai.IntentClassification
+import com.lucid.app.ai.IntentType
+import com.lucid.app.ai.LucidAI
 import java.net.URLEncoder
 
 /**
@@ -7,11 +10,56 @@ import java.net.URLEncoder
  *
  * "If you type 'Learn about Renaissance Architecture,' LUCID spins up
  * a temporary, ephemeral interface dedicated solely to that."
+ *
+ * Now enhanced with AI-powered intent classification.
  */
 object IntentionEngine {
 
+    private var ai: LucidAI? = null
+
     /**
-     * Analyze the intention and determine the best action
+     * Initialize with AI model
+     */
+    fun initialize(lucidAI: LucidAI) {
+        ai = lucidAI
+    }
+
+    /**
+     * Analyze the intention using AI and determine the best action
+     */
+    suspend fun analyzeWithAI(intention: String): IntentionAction {
+        val aiInstance = ai ?: return analyze(intention)
+
+        return try {
+            val classification = aiInstance.classifyIntent(intention)
+            classificationToAction(classification)
+        } catch (e: Exception) {
+            // Fallback to rule-based analysis
+            analyze(intention)
+        }
+    }
+
+    /**
+     * Convert AI classification to IntentionAction
+     */
+    private fun classificationToAction(classification: IntentClassification): IntentionAction {
+        val topic = classification.topic
+
+        return when (classification.intentType) {
+            IntentType.RECIPE -> IntentionAction.Recipe(topic, buildRecipeUrl(topic))
+            IntentType.DEFINITION -> IntentionAction.Define(topic, buildDefineUrl(topic))
+            IntentType.LEARN -> IntentionAction.Learn(topic, buildLearnUrl(topic))
+            IntentType.SEARCH -> IntentionAction.Search(topic, buildSearchUrl(topic))
+            IntentType.NAVIGATE -> IntentionAction.Navigate(topic)
+            IntentType.CALCULATE -> IntentionAction.Calculate(topic)
+            IntentType.WEATHER -> IntentionAction.Weather(topic)
+            IntentType.NEWS -> IntentionAction.News(topic, buildSearchUrl("$topic news"))
+            IntentType.UNKNOWN -> IntentionAction.Search(topic, buildSearchUrl(topic))
+        }
+    }
+
+    /**
+     * Rule-based analysis (fallback)
      */
     fun analyze(intention: String): IntentionAction {
         val normalized = intention.trim().lowercase()
@@ -32,7 +80,8 @@ object IntentionEngine {
             normalized.startsWith("learn ") ||
             normalized.startsWith("understand ") ||
             normalized.startsWith("study ") ||
-            normalized.startsWith("research ") -> {
+            normalized.startsWith("research ") ||
+            normalized.startsWith("tell me about ") -> {
                 val topic = intention.substringAfter(" ").trim()
                 IntentionAction.Learn(topic, buildLearnUrl(topic))
             }
@@ -49,15 +98,19 @@ object IntentionEngine {
             normalized.contains("recipe") ||
             normalized.startsWith("cook ") ||
             normalized.startsWith("make ") ||
-            normalized.startsWith("how to cook ") -> {
+            normalized.startsWith("how to cook ") ||
+            normalized.startsWith("how to make ") -> {
                 val dish = extractRecipeTopic(intention)
                 IntentionAction.Recipe(dish, buildRecipeUrl(dish))
             }
 
             // Definition intents
             normalized.startsWith("what is ") ||
+            normalized.startsWith("what are ") ||
             normalized.startsWith("define ") ||
-            normalized.startsWith("meaning of ") -> {
+            normalized.startsWith("meaning of ") ||
+            normalized.startsWith("who is ") ||
+            normalized.startsWith("who was ") -> {
                 val term = extractDefinitionTopic(intention)
                 IntentionAction.Define(term, buildDefineUrl(term))
             }
@@ -143,4 +196,14 @@ sealed class IntentionAction {
     data class Recipe(override val topic: String, override val url: String) : IntentionAction()
 
     data class Define(override val topic: String, override val url: String) : IntentionAction()
+
+    data class Calculate(override val topic: String) : IntentionAction() {
+        override val url: String = ""
+    }
+
+    data class Weather(override val topic: String) : IntentionAction() {
+        override val url: String = ""
+    }
+
+    data class News(override val topic: String, override val url: String) : IntentionAction()
 }

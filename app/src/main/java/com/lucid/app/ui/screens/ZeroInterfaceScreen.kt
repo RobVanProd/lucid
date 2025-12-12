@@ -20,6 +20,23 @@ import com.lucid.app.ui.components.BreathingDot
 import com.lucid.app.ui.components.IntentionInput
 import com.lucid.app.ui.components.ModeIndicator
 import com.lucid.app.ui.components.ModeSwitch
+import kotlinx.coroutines.delay
+
+/**
+ * Example suggestions to help users understand what they can ask
+ */
+private val exampleSuggestions = listOf(
+    "What is photosynthesis",
+    "Chicken pasta recipe",
+    "Learn about the Renaissance",
+    "How to make bread",
+    "Define serendipity",
+    "Tell me about black holes",
+    "Recipe for chocolate cake",
+    "What is machine learning",
+    "Learn about ancient Rome",
+    "How to cook sushi"
+)
 
 /**
  * The Zero Interface - The Blank Canvas
@@ -38,7 +55,16 @@ fun ZeroInterfaceScreen(
     modifier: Modifier = Modifier
 ) {
     var intentionText by remember { mutableStateOf("") }
-    var showQuickActions by remember { mutableStateOf(false) }
+    var showQuickActions by remember { mutableStateOf(true) }
+    var currentSuggestionIndex by remember { mutableIntStateOf(0) }
+
+    // Rotate through suggestions
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(4000)
+            currentSuggestionIndex = (currentSuggestionIndex + 1) % exampleSuggestions.size
+        }
+    }
 
     Box(
         modifier = modifier
@@ -113,14 +139,43 @@ fun ZeroInterfaceScreen(
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(top = 48.dp)
+                    modifier = Modifier.padding(top = 32.dp)
                 ) {
+                    // Rotating suggestion hint
                     Text(
-                        text = "or",
+                        text = "Try:",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Animated suggestion text
+                    AnimatedContent(
+                        targetState = currentSuggestionIndex,
+                        transitionSpec = {
+                            fadeIn(animationSpec = tween(300)) togetherWith
+                                fadeOut(animationSpec = tween(300))
+                        },
+                        label = "suggestion"
+                    ) { index ->
+                        Surface(
+                            onClick = {
+                                intentionText = exampleSuggestions[index]
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                        ) {
+                            Text(
+                                text = "\"${exampleSuggestions[index]}\"",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
