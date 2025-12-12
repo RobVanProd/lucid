@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LUCID</string>
+    <string name="intent_prompt">What is the intention?</string>
+    <string name="mode_lucid">LUCID</string>
+    <string name="mode_explore">EXPLORE</string>
+    <string name="briefing_title">Briefing</string>
+    <string name="no_messages">Silence. Nothing demands your attention.</string>
+    <string name="loading">Synthesizing…</string>
+    <string name="done">Done</string>
+    <string name="dissolve">Dissolve</string>
+</resources>

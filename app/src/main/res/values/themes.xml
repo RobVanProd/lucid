@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Lucid" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/lucid_background</item>
+        <item name="android:statusBarColor">@color/lucid_background</item>
+        <item name="android:navigationBarColor">@color/lucid_background</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+
+    <style name="Theme.Lucid.Explore" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/explore_background</item>
+        <item name="android:statusBarColor">@color/explore_background</item>
+        <item name="android:navigationBarColor">@color/explore_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- LUCID Mode - Monochrome E-ink aesthetic -->
+    <color name="lucid_background">#FAFAFA</color>
+    <color name="lucid_surface">#F5F5F5</color>
+    <color name="lucid_text_primary">#1A1A1A</color>
+    <color name="lucid_text_secondary">#666666</color>
+    <color name="lucid_accent">#2D2D2D</color>
+    <color name="lucid_cursor">#1A1A1A</color>
+    <color name="lucid_divider">#E0E0E0</color>
+
+    <!-- EXPLORE Mode - Raw internet -->
+    <color name="explore_background">#121212</color>
+    <color name="explore_surface">#1E1E1E</color>
+    <color name="explore_text_primary">#FFFFFF</color>
+    <color name="explore_text_secondary">#B3B3B3</color>
+    <color name="explore_accent">#BB86FC</color>
+
+    <!-- Status colors -->
+    <color name="urgent">#D32F2F</color>
+    <color name="important">#F57C00</color>
+    <color name="low_priority">#757575</color>
+</resources>

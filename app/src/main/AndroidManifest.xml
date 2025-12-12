@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Internet for web browsing -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Vibration for haptic feedback -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Optional: Read notifications for Communication Synthesizer -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Gyroscope feature for mode switching -->
+    <uses-feature
+        android:name="android.hardware.sensor.gyroscope"
+        android:required="false" />
+
+    <application
+        android:name=".LucidApplication"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Lucid"
+        tools:targetApi="34">
+
+        <!-- Main Activity - The Zero Interface -->
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Lucid">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Allow LUCID to be set as home launcher -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Browsing Activity - The Reality Filter -->
+        <activity
+            android:name=".ui.BrowseActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Lucid" />
+
+        <!-- Communication Briefing Activity -->
+        <activity
+            android:name=".ui.BriefingActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Lucid" />
+    </application>
+
+</manifest>
