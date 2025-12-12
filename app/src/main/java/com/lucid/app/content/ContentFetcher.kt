@@ -167,15 +167,13 @@ class ContentFetcher {
     }
 
     /**
-     * Search for recipes using DuckDuckGo
+     * Search for recipes using TheMealDB API (free, no API key needed)
      */
-    suspend fun searchRecipes(query: String): ContentResult<String> {
+    suspend fun searchRecipes(query: String): ContentResult<Recipe> {
         return withContext(Dispatchers.IO) {
             try {
-                // Search for recipes on AllRecipes or similar
-                val searchQuery = "$query recipe site:allrecipes.com OR site:simplyrecipes.com"
-                val encodedQuery = URLEncoder.encode(searchQuery, "UTF-8")
-                val url = "https://html.duckduckgo.com/html/?q=$encodedQuery"
+                val encodedQuery = URLEncoder.encode(query, "UTF-8")
+                val url = "https://www.themealdb.com/api/json/v1/1/search.php?s=$encodedQuery"
 
                 val request = Request.Builder()
                     .url(url)
@@ -183,12 +181,101 @@ class ContentFetcher {
                     .build()
 
                 val response = client.newCall(request).execute()
-                val body = response.body?.string() ?: return@withContext ContentResult.Error("No results")
 
-                ContentResult.Success(body)
+                if (!response.isSuccessful) {
+                    return@withContext ContentResult.Error("Recipe search failed")
+                }
+
+                val body = response.body?.string() ?: return@withContext ContentResult.Error("Empty response")
+                val json = JSONObject(body)
+
+                val meals = json.optJSONArray("meals")
+                if (meals == null || meals.length() == 0) {
+                    return@withContext ContentResult.Error("No recipes found")
+                }
+
+                val meal = meals.getJSONObject(0)
+                val recipe = parseMealDbRecipe(meal)
+                ContentResult.Success(recipe)
             } catch (e: Exception) {
                 ContentResult.Error(e.message ?: "Recipe search failed")
             }
         }
+    }
+
+    /**
+     * Get a random recipe from TheMealDB
+     */
+    suspend fun getRandomRecipe(): ContentResult<Recipe> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val url = "https://www.themealdb.com/api/json/v1/1/random.php"
+
+                val request = Request.Builder()
+                    .url(url)
+                    .header("User-Agent", userAgent)
+                    .build()
+
+                val response = client.newCall(request).execute()
+                val body = response.body?.string() ?: return@withContext ContentResult.Error("Empty response")
+                val json = JSONObject(body)
+
+                val meals = json.optJSONArray("meals")
+                if (meals == null || meals.length() == 0) {
+                    return@withContext ContentResult.Error("No recipe found")
+                }
+
+                val meal = meals.getJSONObject(0)
+                val recipe = parseMealDbRecipe(meal)
+                ContentResult.Success(recipe)
+            } catch (e: Exception) {
+                ContentResult.Error(e.message ?: "Recipe fetch failed")
+            }
+        }
+    }
+
+    /**
+     * Parse TheMealDB JSON into Recipe object
+     */
+    private fun parseMealDbRecipe(meal: JSONObject): Recipe {
+        val title = meal.optString("strMeal", "Recipe")
+        val category = meal.optString("strCategory", "")
+        val area = meal.optString("strArea", "")
+        val instructions = meal.optString("strInstructions", "")
+
+        // Extract ingredients (TheMealDB uses strIngredient1-20 and strMeasure1-20)
+        val ingredients = mutableListOf<String>()
+        for (i in 1..20) {
+            val ingredient = meal.optString("strIngredient$i", "").trim()
+            val measure = meal.optString("strMeasure$i", "").trim()
+            if (ingredient.isNotEmpty()) {
+                val full = if (measure.isNotEmpty()) "$measure $ingredient" else ingredient
+                ingredients.add(full)
+            }
+        }
+
+        // Parse instructions into steps
+        val steps = instructions
+            .split(Regex("\\r?\\n|\\. (?=[A-Z])"))
+            .filter { it.trim().length > 10 }
+            .mapIndexed { index, instruction ->
+                RecipeStep(index + 1, instruction.trim().removeSuffix(".") + ".")
+            }
+
+        val description = buildString {
+            if (category.isNotEmpty()) append("$category")
+            if (area.isNotEmpty()) {
+                if (isNotEmpty()) append(" • ")
+                append("$area cuisine")
+            }
+        }
+
+        return Recipe(
+            title = title,
+            description = description,
+            ingredients = ingredients,
+            steps = steps,
+            source = "TheMealDB"
+        )
     }
 }

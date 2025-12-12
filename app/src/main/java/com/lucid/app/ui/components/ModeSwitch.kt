@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -51,10 +52,16 @@ fun ModeSwitch(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val density = LocalDensity.current
+
+    // Calculate offset in pixels from dp
+    // Container is 200.dp, slider is 92.dp + 4.dp padding on each side = 100.dp
+    // So the slider needs to move (200 - 100) = 100.dp to the right for EXPLORE mode
+    val offsetPx = with(density) { 100.dp.toPx().roundToInt() }
 
     // Animation
     val switchOffset by animateIntOffsetAsState(
-        targetValue = if (isLucidMode) IntOffset.Zero else IntOffset(100, 0),
+        targetValue = if (isLucidMode) IntOffset.Zero else IntOffset(offsetPx, 0),
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow

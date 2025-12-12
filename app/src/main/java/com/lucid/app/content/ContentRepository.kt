@@ -47,42 +47,27 @@ class ContentRepository(
      */
     suspend fun getRecipe(query: String): ContentResult<Recipe> {
         return withContext(Dispatchers.IO) {
-            // First try to search for recipes
-            val searchResult = fetcher.searchRecipes(query)
+            // Use TheMealDB API directly
+            val recipeResult = fetcher.searchRecipes(query)
 
-            if (searchResult is ContentResult.Success) {
-                // Parse search results to find recipe URLs
-                val urls = extractRecipeUrls(searchResult.data)
-
-                // Try each URL until we find a valid recipe
-                for (url in urls.take(3)) {
-                    val htmlResult = fetcher.fetchHtml(url)
-                    if (htmlResult is ContentResult.Success) {
-                        val recipe = parser.parseRecipe(htmlResult.data, url)
-                        if (recipe != null && recipe.ingredients.isNotEmpty()) {
-                            return@withContext ContentResult.Success(recipe)
-                        }
-                    }
-                }
+            if (recipeResult is ContentResult.Success) {
+                return@withContext recipeResult
             }
 
-            // Fallback: create a basic recipe from DuckDuckGo answer
-            val ddgResult = fetcher.fetchDuckDuckGoAnswer("$query recipe")
-            if (ddgResult is ContentResult.Success) {
+            // If specific search fails, try getting a random recipe as fallback
+            // (better UX than showing error)
+            val randomResult = fetcher.getRandomRecipe()
+            if (randomResult is ContentResult.Success) {
+                // Add note that this is a suggested recipe
+                val recipe = randomResult.data
                 return@withContext ContentResult.Success(
-                    Recipe(
-                        title = "$query Recipe",
-                        description = ddgResult.data.summary,
-                        ingredients = emptyList(),
-                        steps = listOf(
-                            RecipeStep(1, "Search for \"$query recipe\" for detailed instructions")
-                        ),
-                        source = ddgResult.data.source
+                    recipe.copy(
+                        description = "Suggested recipe: ${recipe.description}".trim()
                     )
                 )
             }
 
-            ContentResult.Error("Could not find recipe for $query")
+            ContentResult.Error("Could not find recipe for \"$query\". Try searching for common dishes like \"chicken\", \"pasta\", or \"soup\".")
         }
     }
 
@@ -226,30 +211,6 @@ class ContentRepository(
      */
     private suspend fun getNews(topic: String): ContentResult<ExtractedContent> {
         return fetcher.fetchDuckDuckGoAnswer("$topic news today")
-    }
-
-    /**
-     * Extract recipe URLs from search results HTML
-     */
-    private fun extractRecipeUrls(html: String): List<String> {
-        val urls = mutableListOf<String>()
-        val urlPattern = Regex("href=\"(https?://[^\"]+)\"")
-
-        urlPattern.findAll(html).forEach { match ->
-            val url = match.groupValues[1]
-            // Filter for recipe sites
-            if (url.contains("allrecipes.com") ||
-                url.contains("simplyrecipes.com") ||
-                url.contains("foodnetwork.com") ||
-                url.contains("epicurious.com") ||
-                url.contains("bonappetit.com") ||
-                url.contains("seriouseats.com") ||
-                url.contains("recipe")) {
-                urls.add(url)
-            }
-        }
-
-        return urls.distinct()
     }
 
     /**

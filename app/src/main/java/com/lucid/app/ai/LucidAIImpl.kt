@@ -9,15 +9,24 @@ import kotlinx.coroutines.withContext
 /**
  * LUCID AI Implementation
  *
- * Currently uses enhanced rule-based classification with plans to
- * integrate Qwen2.5-0.5B via llama.cpp for on-device inference.
+ * Uses a hybrid approach:
+ * 1. First tries native llama.cpp inference if available
+ * 2. Falls back to enhanced rule-based classification
  *
- * The interface-based design allows seamless upgrade to SLM.
+ * The native inference can be enabled by:
+ * - Building llama.cpp for Android
+ * - Downloading a GGUF model
+ * - Calling LlamaInference.loadModel()
  */
 class LucidAIImpl(private val context: Context) : LucidAI {
 
     private val _status = MutableStateFlow<ModelStatus>(ModelStatus.Ready)
     val status: StateFlow<ModelStatus> = _status
+
+    // Native inference engine (lazy initialization)
+    private val llamaInference: LlamaInference by lazy {
+        LlamaInference.getInstance(context)
+    }
 
     // Keywords for intent classification
     private val recipeKeywords = listOf(
@@ -48,88 +57,107 @@ class LucidAIImpl(private val context: Context) : LucidAI {
         "news", "latest", "recent", "today", "headlines", "update on"
     )
 
+    /**
+     * Check if native inference is available
+     */
+    fun isNativeInferenceAvailable(): Boolean = llamaInference.isNativeAvailable()
+
     override suspend fun isReady(): Boolean = true
 
     override suspend fun classifyIntent(text: String): IntentClassification {
         return withContext(Dispatchers.Default) {
-            val normalized = text.trim().lowercase()
-
-            // Check for direct URL
-            if (normalized.startsWith("http://") || normalized.startsWith("https://") ||
-                normalized.contains(".com") || normalized.contains(".org")) {
-                return@withContext IntentClassification(
-                    intentType = IntentType.NAVIGATE,
-                    confidence = 0.95f,
-                    topic = text.trim()
-                )
+            // Try native inference first if available
+            val nativeResult = llamaInference.classifyIntent(text)
+            if (nativeResult != null) {
+                return@withContext nativeResult
             }
 
-            // Recipe detection
-            if (recipeKeywords.any { normalized.contains(it) }) {
-                val topic = extractTopic(normalized, recipeKeywords)
-                return@withContext IntentClassification(
-                    intentType = IntentType.RECIPE,
-                    confidence = 0.9f,
-                    topic = topic
-                )
-            }
+            // Fall back to rule-based classification
+            classifyIntentRuleBased(text)
+        }
+    }
 
-            // Definition detection
-            if (definitionKeywords.any { normalized.startsWith(it) || normalized.contains(it) }) {
-                val topic = extractTopic(normalized, definitionKeywords)
-                return@withContext IntentClassification(
-                    intentType = IntentType.DEFINITION,
-                    confidence = 0.9f,
-                    topic = topic
-                )
-            }
+    /**
+     * Rule-based intent classification (fallback when native inference unavailable)
+     */
+    private fun classifyIntentRuleBased(text: String): IntentClassification {
+        val normalized = text.trim().lowercase()
 
-            // Learning detection
-            if (learnKeywords.any { normalized.startsWith(it) || normalized.contains(it) }) {
-                val topic = extractTopic(normalized, learnKeywords)
-                return@withContext IntentClassification(
-                    intentType = IntentType.LEARN,
-                    confidence = 0.85f,
-                    topic = topic
-                )
-            }
-
-            // Calculate detection
-            if (calculateKeywords.any { normalized.contains(it) }) {
-                return@withContext IntentClassification(
-                    intentType = IntentType.CALCULATE,
-                    confidence = 0.85f,
-                    topic = normalized
-                )
-            }
-
-            // Weather detection
-            if (weatherKeywords.any { normalized.contains(it) }) {
-                val topic = extractTopic(normalized, weatherKeywords)
-                return@withContext IntentClassification(
-                    intentType = IntentType.WEATHER,
-                    confidence = 0.85f,
-                    topic = topic
-                )
-            }
-
-            // News detection
-            if (newsKeywords.any { normalized.contains(it) }) {
-                val topic = extractTopic(normalized, newsKeywords)
-                return@withContext IntentClassification(
-                    intentType = IntentType.NEWS,
-                    confidence = 0.8f,
-                    topic = topic
-                )
-            }
-
-            // Default to search with the full query as topic
-            IntentClassification(
-                intentType = IntentType.SEARCH,
-                confidence = 0.6f,
+        // Check for direct URL
+        if (normalized.startsWith("http://") || normalized.startsWith("https://") ||
+            normalized.contains(".com") || normalized.contains(".org")) {
+            return IntentClassification(
+                intentType = IntentType.NAVIGATE,
+                confidence = 0.95f,
                 topic = text.trim()
             )
         }
+
+        // Recipe detection
+        if (recipeKeywords.any { normalized.contains(it) }) {
+            val topic = extractTopic(normalized, recipeKeywords)
+            return IntentClassification(
+                intentType = IntentType.RECIPE,
+                confidence = 0.9f,
+                topic = topic
+            )
+        }
+
+        // Definition detection
+        if (definitionKeywords.any { normalized.startsWith(it) || normalized.contains(it) }) {
+            val topic = extractTopic(normalized, definitionKeywords)
+            return IntentClassification(
+                intentType = IntentType.DEFINITION,
+                confidence = 0.9f,
+                topic = topic
+            )
+        }
+
+        // Learning detection
+        if (learnKeywords.any { normalized.startsWith(it) || normalized.contains(it) }) {
+            val topic = extractTopic(normalized, learnKeywords)
+            return IntentClassification(
+                intentType = IntentType.LEARN,
+                confidence = 0.85f,
+                topic = topic
+            )
+        }
+
+        // Calculate detection
+        if (calculateKeywords.any { normalized.contains(it) }) {
+            return IntentClassification(
+                intentType = IntentType.CALCULATE,
+                confidence = 0.85f,
+                topic = normalized
+            )
+        }
+
+        // Weather detection
+        if (weatherKeywords.any { normalized.contains(it) }) {
+            val topic = extractTopic(normalized, weatherKeywords)
+            return IntentClassification(
+                intentType = IntentType.WEATHER,
+                confidence = 0.85f,
+                topic = topic
+            )
+        }
+
+        // News detection
+        if (newsKeywords.any { normalized.contains(it) }) {
+            val topic = extractTopic(normalized, newsKeywords)
+            return IntentClassification(
+                intentType = IntentType.NEWS,
+                confidence = 0.8f,
+                topic = topic
+            )
+        }
+
+        // Default to search with the full query as topic
+        return IntentClassification(
+            intentType = IntentType.SEARCH,
+            confidence = 0.6f,
+            topic = text.trim()
+        )
     }
 
     override suspend fun summarize(content: String, maxLength: Int): String {

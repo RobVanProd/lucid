@@ -1,5 +1,8 @@
 package com.lucid.app.ui.screens
 
+import android.content.ComponentName
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -11,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Message
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
@@ -19,7 +23,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lucid.app.data.BriefingItem
@@ -44,7 +50,19 @@ fun BriefingScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Sample briefing data - in production, this would aggregate from real sources
+    val context = LocalContext.current
+    var hasNotificationAccess by remember { mutableStateOf(false) }
+
+    // Check notification access
+    LaunchedEffect(Unit) {
+        val enabledListeners = Settings.Secure.getString(
+            context.contentResolver,
+            "enabled_notification_listeners"
+        )
+        hasNotificationAccess = enabledListeners?.contains(context.packageName) == true
+    }
+
+    // Demo briefing data - shows what the feature will look like
     val briefingItems = remember {
         listOf(
             BriefingItem(
@@ -58,17 +76,33 @@ fun BriefingScreen(
             BriefingItem(
                 id = "2",
                 source = "Email",
-                sender = "Team",
-                preview = "Weekly standup notes attached",
-                timestamp = System.currentTimeMillis() - 7200000,
+                sender = "Work",
+                preview = "Meeting rescheduled to 3pm",
+                timestamp = System.currentTimeMillis() - 5400000,
                 priority = Priority.NORMAL
             ),
             BriefingItem(
                 id = "3",
+                source = "Messages",
+                sender = "Alex",
+                preview = "Did you see the game last night?",
+                timestamp = System.currentTimeMillis() - 7200000,
+                priority = Priority.NORMAL
+            ),
+            BriefingItem(
+                id = "4",
                 source = "Newsletter",
                 sender = "Tech Weekly",
                 preview = "5 articles summarized",
                 timestamp = System.currentTimeMillis() - 86400000,
+                priority = Priority.LOW
+            ),
+            BriefingItem(
+                id = "5",
+                source = "Promotions",
+                sender = "Store",
+                preview = "20% off this weekend only",
+                timestamp = System.currentTimeMillis() - 172800000,
                 priority = Priority.LOW
             )
         )
@@ -107,6 +141,28 @@ fun BriefingScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Notification access notice
+            if (!hasNotificationAccess) {
+                item {
+                    NotificationAccessCard(
+                        onRequestAccess = {
+                            val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                            context.startActivity(intent)
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                item {
+                    Text(
+                        text = "Preview Mode",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+            }
+
             // Summary header
             item {
                 BriefingSummary(
@@ -321,4 +377,60 @@ private fun LowPrioritySummary(count: Int) {
         color = LowPriorityColor,
         modifier = Modifier.padding(vertical = 8.dp)
     )
+}
+
+/**
+ * Card prompting user to enable notification access
+ */
+@Composable
+private fun NotificationAccessCard(
+    onRequestAccess: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Lock,
+                contentDescription = null,
+                modifier = Modifier.size(32.dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+
+            Text(
+                text = "Enable Notification Access",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+
+            Text(
+                text = "LUCID can synthesize your notifications into a calm briefing. Grant access to see your real messages, emails, and alerts organized by priority.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                textAlign = TextAlign.Center
+            )
+
+            Button(
+                onClick = onRequestAccess,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    contentColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Text("Grant Access")
+            }
+        }
+    }
 }
