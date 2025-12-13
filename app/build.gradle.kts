@@ -6,17 +6,40 @@ plugins {
 android {
     namespace = "com.lucid.app"
     compileSdk = 34
+    ndkVersion = "26.1.10909125"
 
     defaultConfig {
         applicationId = "com.lucid.app"
         minSdk = 29
         targetSdk = 34
-        versionCode = 3
-        versionName = "0.2.1"
+        versionCode = 4
+        versionName = "0.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+
+        // NDK configuration for llama.cpp
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+        }
+
+        externalNativeBuild {
+            cmake {
+                arguments += listOf(
+                    "-DANDROID_STL=c++_shared",
+                    "-DCMAKE_BUILD_TYPE=Release"
+                )
+                cppFlags += listOf("-std=c++17", "-O3", "-ffast-math")
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
         }
     }
 

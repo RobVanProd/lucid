@@ -55,6 +55,19 @@ A physical interaction using the phone's gyroscope or swipe gesture:
 - **Mode A: EXPLORE** - The internet as it is. Raw.
 - **Mode B: LUCID** - The filter is up. E-ink aesthetic. Monochrome. The dopamine loops are severed.
 
+### 5. On-Device AI (llama.cpp)
+
+LUCID integrates llama.cpp for true on-device AI inference:
+
+- **Privacy-first**: All processing happens on your device. No data leaves your phone.
+- **Intent Classification**: Understands what you want before you search
+- **Content Summarization**: Distills articles to their essence
+- **Automatic Model Download**: One-tap download of optimized GGUF models
+
+Supported models:
+- **SmolLM2 135M** (~144 MB) - Fast, good for classification
+- **Qwen2.5 0.5B** (~394 MB) - Balanced performance
+
 ---
 
 ## Building the APK
@@ -88,6 +101,8 @@ docker run --rm -v $(pwd)/output:/output lucid-builder
 - Android SDK with:
   - Platform SDK 34
   - Build Tools 34.0.0
+  - NDK 26.1.10909125 (for native AI)
+  - CMake 3.22.1+
 
 ```bash
 # Set Android SDK path
@@ -119,7 +134,12 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 lucid/
 ├── app/
 │   └── src/main/
+│       ├── cpp/                # Native C++ code
+│       │   ├── CMakeLists.txt  # llama.cpp build config
+│       │   └── llama-jni.cpp   # JNI bridge
 │       ├── java/com/lucid/app/
+│       │   ├── ai/             # AI inference engine
+│       │   ├── content/        # Content fetching/parsing
 │       │   ├── data/           # Data models and preferences
 │       │   ├── filter/         # Reality Filter engine
 │       │   └── ui/             # Compose UI components
